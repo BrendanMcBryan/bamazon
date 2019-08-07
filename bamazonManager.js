@@ -43,7 +43,7 @@ function listProducts() {
 }
 
 function welcome() {
-  //   getConnected();
+  // getConnected();
 
   inquirer
     .prompt([
@@ -77,35 +77,118 @@ function welcome() {
           addNewProduct();
           break;
       }
-
-      // determine if bid was high enough
     });
   //   connection.end();
 }
 
 function viewProducts() {
   console.log("view products was chosen");
-  connection.end();
+  // listProducts();
+  const query = connection.query(
+    "SELECT * FROM products",
+    // "SELECT * FROM products WHERE ?",
+    // {
+    //   department_name: "Produce"
+    // },
+    function(err, res) {
+      if (err) throw err;
+      //   console.log(res);
+      let table = cTable.getTable(res);
+
+      console.log(table);
+      //   connection.end();
+    }
+  );
+  // connection.end();
 }
 
 function viewLowInventory() {
   console.log("low invientory");
-  connection.end();
+  const query = connection.query(
+    "SELECT * FROM products",
+    // "SELECT * FROM products WHERE ?",
+    // {
+    //   department_name: "Produce"
+    // },
+    function(err, res) {
+      if (err) throw err;
+      //   console.log(res);
+      let table = cTable.getTable(res);
+
+      console.log(table);
+      //   connection.end();
+    }
+  );
+  // connection.end();
 }
 
 function addInventory() {
   console.log("Add to Inventory chosen");
-  connection.end();
+  inquirer
+    .prompt([
+      {
+        name: "updateID",
+        type: "numer",
+        message: "Which product ID would you like to update?"
+      },
+      { name: "updateQty", type: "number", message: "New Quantity?" }
+    ])
+    .then(function(answer) {
+      var query = connection.query(
+        "UPDATE products SET ? WHERE ?",
+        [
+          {
+            stock_quantity: answer.updateQty
+          },
+          {
+            item_id: answer.updateID
+          }
+        ],
+        function(err, res) {
+          if (err) throw err;
+          console.log(res.affectedRows + " products updated!\n");
+        }
+      );
+    });
 }
 
 function addNewProduct() {
   console.log("Add New Product chosen");
-  connection.end();
+
+  // listProducts();
+
+  inquirer
+    .prompt([
+      { name: "addName", type: "input", message: "What is the Product Name?" },
+      { name: "addDept", type: "input", message: "What Department?" },
+      { name: "addPrice", type: "number", message: "The Price?" },
+      { name: "addQty", type: "number", message: "And how many are we adding?" }
+    ])
+    .then(function(answer) {
+      console.log(answer);
+      var query = connection.query(
+        "INSERT INTO products SET ?",
+        {
+          product_name: answer.addName,
+          department_name: answer.addDept,
+          price: answer.addPrice,
+          stock_quantity: answer.addQty
+        },
+        function(err, res) {
+          if (err) throw err;
+          console.log(res.affectedRows + " product inserted!\n");
+        }
+      );
+
+      // logs the actual query being run
+      // console.log(query.sql);
+    });
+  // connection.end();
 }
 
 function start() {
   getConnected();
-  //   listProducts();
+  listProducts();
   welcome();
 }
 
