@@ -36,7 +36,7 @@ async function listProducts() {
 }
 
 async function askBuy() {
-  //   const result = await listProducts();
+  // const result = await listProducts();
   const response = await inquirer.prompt([
     {
       type: "input",
@@ -51,7 +51,7 @@ async function askBuy() {
     }
   ]);
 
-  console.table(response);
+  // console.table(response);
   const result = await connection.query(
     // "SELECT * FROM products",
     "SELECT * FROM products WHERE ?",
@@ -63,6 +63,7 @@ async function askBuy() {
       const table = cTable.getTable(res);
       let availableStock = parseInt(res[0].stock_quantity);
       let itemPrice = res[0].price;
+      let itemName = res[0].product_name;
       let requestedStock = parseInt(response.userQty);
       //   console.log(response.userQty + " user quantity" + typeof response.userQty);
       //   console.log(res[0].stock_quantity + " stock quantity");
@@ -88,17 +89,29 @@ async function askBuy() {
           ],
           function(err, res) {
             if (err) throw err;
-            console.log(`That's great! Your cost is…
+            console.log(`That's great! Your cost for ${requestedStock} ${itemName} is…
             $ ${userCost}`);
-            askBuy();
-            // console.log(res.affectedRows + " products updated!\n");
-            // Call deleteProduct AFTER the UPDATE completes
-            //   deleteProduct();
+
+            const buyagain = inquirer
+              .prompt([
+                {
+                  type: "confirm",
+                  message: "Would you like to make another Purchase?",
+                  name: "buyMore"
+                }
+              ])
+              .then(function(inquirerResponse) {
+                if (inquirerResponse.buyMore) {
+                  askBuy();
+                } else {
+                  console.log("\nThanks. Come again soon.\n");
+                  connection.end();
+                }
+              });
           }
         );
       }
 
-      //   connection.end();
     }
   );
 }
@@ -120,8 +133,8 @@ function addProduct() {
 }
 
 function start() {
-  listProducts();
   getConnected();
+  listProducts();
   askBuy();
   //   connection.end();
 }
