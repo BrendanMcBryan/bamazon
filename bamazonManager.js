@@ -15,37 +15,23 @@ const connection = mysql.createConnection({
   database: "bamazonDB"
 });
 
-async function getConnected() {
-  const result = await connection.connect(function(err) {
+function getConnected() {
+  connection.connect(function(err) {
     if (err) throw err;
     // console.log("connected as id " + connection.threadId + "\n");
-    // return;
-    // connection.end();
   });
 }
 
-async function listProducts() {
-  //   getConnected();
-  const result = connection.query(
-    "SELECT * FROM products",
-    // "SELECT * FROM products WHERE ?",
-    // {
-    //   department_name: "Produce"
-    // },
-    function(err, res) {
-      if (err) throw err;
-      //   console.log(res);
-      const table = cTable.getTable(res);
-      console.log(`\n${table}`);
-      //   connection.end();
-      return;
-    }
-  );
+function listProducts() {
+  connection.query("SELECT * FROM products", function(err, res) {
+    if (err) throw err;
+    const table = cTable.getTable(res);
+    console.log(`\n${table}`);
+    return;
+  });
 }
 
 async function welcome() {
-  // getConnected();
-console.log(`\n`);
   const result = await inquirer
     .prompt([
       {
@@ -63,7 +49,6 @@ console.log(`\n`);
     ])
     .then(function(answer) {
       var chosenItem = answer.managerChoice;
-      console.log(chosenItem);
 
       switch (chosenItem) {
         case "Exit":
@@ -84,19 +69,18 @@ console.log(`\n`);
           listProducts();
           setTimeout(() => {
             welcome();
-          }, 500);
+          }, 200);
 
           break;
         default:
           listProducts();
           setTimeout(() => {
             welcome();
-          }, 500);
+          }, 200);
       }
     });
   //   connection.end();
 }
-
 
 async function viewLowInventory() {
   const lowInv = 150;
@@ -106,13 +90,12 @@ async function viewLowInventory() {
 
     function(err, res) {
       if (err) throw err;
-      //   console.log(res);
       let table = cTable.getTable(res);
-      console.log(table);
+      console.log(`\n${table}`);
 
       setTimeout(() => {
         welcome();
-      }, 500);
+      }, 200);
 
       return;
     }
@@ -120,7 +103,7 @@ async function viewLowInventory() {
 }
 
 async function addInventory() {
- await  listProducts();
+  await listProducts();
   setTimeout(() => {
     inquirer
       .prompt([
@@ -145,7 +128,7 @@ async function addInventory() {
           function(err, res) {
             if (err) throw err;
             console.log(
-              "Ok, " +
+              "\nOk, " +
                 res.affectedRows +
                 " products have been update updated!\n"
             );
@@ -167,16 +150,10 @@ async function addInventory() {
           }
         );
       });
-  }, 500);
+  }, 200);
 }
 
 async function addNewProduct() {
-  console.log(`
-  Add New Product chosen
-  `);
-
-  // listProducts();
-
   const questions = await inquirer
     .prompt([
       { name: "addName", type: "input", message: "What is the Product Name?" },
@@ -185,7 +162,6 @@ async function addNewProduct() {
       { name: "addQty", type: "number", message: "And how many are we adding?" }
     ])
     .then(function(answer) {
-      console.log(`\n${answer}\n`);
       var query = connection.query(
         "INSERT INTO products SET ?",
         {
@@ -196,7 +172,7 @@ async function addNewProduct() {
         },
         function(err, res) {
           if (err) throw err;
-          console.log(res.affectedRows + " product inserted!\n");
+          console.log("\n" + res.affectedRows + " product inserted!\n");
 
           inquirer
             .prompt([
@@ -216,20 +192,17 @@ async function addNewProduct() {
             });
         }
       );
-
-      // logs the actual query being run
       // console.log(query.sql);
     });
-  // connection.end();
 }
 
 function start() {
   getConnected();
   setTimeout(() => {
     listProducts();
-  }, 500);
+  }, 100);
   setTimeout(() => {
     welcome();
-  }, 1200);
+  }, 200);
 }
 start();

@@ -10,33 +10,27 @@ const connection = mysql.createConnection({
   database: "bamazonDB"
 });
 
-async function getConnected() {
-  const connect = await connection.connect(function(err) {
+function getConnected() {
+  connection.connect(function(err) {
     if (err) throw err;
-    console.log("connected as id " + connection.threadId + "\n");
+    // console.log("\nconnected as id " + connection.threadId + "\n");
+    listProducts();
   });
 }
 
-async function listProducts() {
-  const result = await connection.query(
+function listProducts() {
+  connection.query(
     "SELECT item_id, product_name, price, stock_quantity FROM products",
-    // "SELECT * FROM products WHERE ?",
-    // {
-    //   department_name: "Produce"
-    // },
     function(err, res) {
       if (err) throw err;
-      //   console.log(res);
       const table = cTable.getTable(res);
-
-      console.log(table);
-      //   connection.end();
+      console.log(`\n${table}`);
+      askBuy();
     }
   );
 }
 
 async function askBuy() {
-  // const result = await listProducts();
   const response = await inquirer.prompt([
     {
       type: "input",
@@ -51,7 +45,7 @@ async function askBuy() {
     }
   ]);
 
-  const result = await connection.query(
+  connection.query(
     "SELECT * FROM products WHERE ?",
     {
       item_id: response.userItem
@@ -59,29 +53,25 @@ async function askBuy() {
     function(err, res) {
       if (err) throw err;
       const table = cTable.getTable(res);
+      //load some variables
       let availableStock = parseInt(res[0].stock_quantity);
       let itemPrice = res[0].price;
       let itemName = res[0].product_name;
       let productSales = res[0].product_sales;
       let requestedStock = parseInt(response.userQty);
-      //   console.log(response.userQty + " user quantity" + typeof response.userQty);
-      //   console.log(res[0].stock_quantity + " stock quantity");
 
+      // make sure there is enough stock
       if (requestedStock > availableStock) {
-        // console.log(table);
         console.log(
           `\nApologies, we do not have enough stock for that large a purchase\n`
         );
         listProducts();
-        setTimeout(() => {
-          askBuy();
-        }, 1250);
       } else {
         let userCost = (requestedStock * itemPrice).toFixed(2);
         let newTotalSales = (productSales + requestedStock * itemPrice).toFixed(
           2
         );
-        var profits = connection.query("UPDATE products SET ? WHERE ?", [
+        connection.query("UPDATE products SET ? WHERE ?", [
           {
             product_sales: newTotalSales
           },
@@ -105,7 +95,7 @@ async function askBuy() {
             console.log(`That's great! Your cost for ${requestedStock} ${itemName} is…
             $ ${userCost}`);
 
-            const buyagain = inquirer
+            inquirer
               .prompt([
                 {
                   type: "confirm",
@@ -115,9 +105,7 @@ async function askBuy() {
               ])
               .then(function(inquirerResponse) {
                 if (inquirerResponse.buyMore) {
-                  setTimeout(() => {
-                    askBuy();
-                  }, 500);
+                  listProducts();
                 } else {
                   console.log("\nThanks. Come again soon.\n");
                   connection.end();
@@ -130,14 +118,4 @@ async function askBuy() {
   );
 }
 
-function start() {
-  getConnected();
-  listProducts();
-  setTimeout(function() {
-    askBuy();
-  }, 2000);
-
-  //   connection.end();
-}
-
-start();
+getConnected();
