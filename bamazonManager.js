@@ -15,17 +15,18 @@ const connection = mysql.createConnection({
   database: "bamazonDB"
 });
 
-function getConnected() {
-  connection.connect(function(err) {
+async function getConnected() {
+  const result = await connection.connect(function(err) {
     if (err) throw err;
-    console.log("connected as id " + connection.threadId + "\n");
+    // console.log("connected as id " + connection.threadId + "\n");
+    // return;
     // connection.end();
   });
 }
 
-function listProducts() {
+async function listProducts() {
   //   getConnected();
-  connection.query(
+  const result = connection.query(
     "SELECT * FROM products",
     // "SELECT * FROM products WHERE ?",
     // {
@@ -35,27 +36,28 @@ function listProducts() {
       if (err) throw err;
       //   console.log(res);
       const table = cTable.getTable(res);
-
-      console.log(table);
+      console.log(`\n${table}`);
       //   connection.end();
+      return;
     }
   );
 }
 
-function welcome() {
+async function welcome() {
   // getConnected();
-
-  inquirer
+console.log(`\n`);
+  const result = await inquirer
     .prompt([
       {
         name: "managerChoice",
         type: "list",
         message: "What would youlike to do today, manager?",
         choices: [
-          "View Products for Sale",
+          "See Inventory",
           "View Low Inventory",
           "Add to Inventory",
-          "Add New Product"
+          "Add New Product",
+          "Exit"
         ]
       }
     ])
@@ -63,12 +65,14 @@ function welcome() {
       var chosenItem = answer.managerChoice;
       console.log(chosenItem);
 
-      switch (answer.managerChoice) {
-        case "View Products For Sale":
-          viewProducts();
+      switch (chosenItem) {
+        case "Exit":
+          console.log(`\nHave a great day!\n`);
+          connection.end();
           break;
         case "View Low Inventory":
           viewLowInventory();
+          // welcome();
           break;
         case "Add to Inventory":
           addInventory();
@@ -76,88 +80,104 @@ function welcome() {
         case "Add New Product":
           addNewProduct();
           break;
+        case "See Inventory":
+          listProducts();
+          setTimeout(() => {
+            welcome();
+          }, 500);
+
+          break;
+        default:
+          listProducts();
+          setTimeout(() => {
+            welcome();
+          }, 500);
       }
     });
   //   connection.end();
 }
 
-function viewProducts() {
-  console.log("view products was chosen");
-  // listProducts();
-  const query = connection.query(
-    "SELECT * FROM products",
-    // "SELECT * FROM products WHERE ?",
-    // {
-    //   department_name: "Produce"
-    // },
+
+async function viewLowInventory() {
+  const lowInv = 150;
+  const query = await connection.query(
+    // "SELECT * FROM products",
+    "SELECT * FROM products WHERE stock_quantity <" + lowInv,
+
     function(err, res) {
       if (err) throw err;
       //   console.log(res);
       let table = cTable.getTable(res);
-
       console.log(table);
-      //   connection.end();
+
+      setTimeout(() => {
+        welcome();
+      }, 500);
+
+      return;
     }
   );
-  // connection.end();
 }
 
-function viewLowInventory() {
-  console.log("low invientory");
-  const query = connection.query(
-    "SELECT * FROM products",
-    // "SELECT * FROM products WHERE ?",
-    // {
-    //   department_name: "Produce"
-    // },
-    function(err, res) {
-      if (err) throw err;
-      //   console.log(res);
-      let table = cTable.getTable(res);
-
-      console.log(table);
-      //   connection.end();
-    }
-  );
-  // connection.end();
-}
-
-function addInventory() {
-  console.log("Add to Inventory chosen");
-  inquirer
-    .prompt([
-      {
-        name: "updateID",
-        type: "numer",
-        message: "Which product ID would you like to update?"
-      },
-      { name: "updateQty", type: "number", message: "New Quantity?" }
-    ])
-    .then(function(answer) {
-      var query = connection.query(
-        "UPDATE products SET ? WHERE ?",
-        [
-          {
-            stock_quantity: answer.updateQty
-          },
-          {
-            item_id: answer.updateID
+async function addInventory() {
+ await  listProducts();
+  setTimeout(() => {
+    inquirer
+      .prompt([
+        {
+          name: "updateID",
+          type: "numer",
+          message: "Which product ID would you like to update?"
+        },
+        { name: "updateQty", type: "number", message: "New Quantity?" }
+      ])
+      .then(function(answer) {
+        var query = connection.query(
+          "UPDATE products SET ? WHERE ?",
+          [
+            {
+              stock_quantity: answer.updateQty
+            },
+            {
+              item_id: answer.updateID
+            }
+          ],
+          function(err, res) {
+            if (err) throw err;
+            console.log(
+              "Ok, " +
+                res.affectedRows +
+                " products have been update updated!\n"
+            );
+            inquirer
+              .prompt([
+                {
+                  type: "confirm",
+                  name: "addAnother",
+                  message: "Would you like to update another Product?"
+                }
+              ])
+              .then(function(answer) {
+                if (answer.addAnother) {
+                  addInventory();
+                  return;
+                }
+                welcome();
+              });
           }
-        ],
-        function(err, res) {
-          if (err) throw err;
-          console.log(res.affectedRows + " products updated!\n");
-        }
-      );
-    });
+        );
+      });
+  }, 500);
 }
 
-function addNewProduct() {
-  console.log("Add New Product chosen");
+async function addNewProduct() {
+  console.log(`
+  Add New Product chosen
+  `);
 
   // listProducts();
 
-  inquirer
+  const questions = await inquirer
     .prompt([
       { name: "addName", type: "input", message: "What is the Product Name?" },
       { name: "addDept", type: "input", message: "What Department?" },
@@ -165,7 +185,7 @@ function addNewProduct() {
       { name: "addQty", type: "number", message: "And how many are we adding?" }
     ])
     .then(function(answer) {
-      console.log(answer);
+      console.log(`\n${answer}\n`);
       var query = connection.query(
         "INSERT INTO products SET ?",
         {
@@ -177,6 +197,23 @@ function addNewProduct() {
         function(err, res) {
           if (err) throw err;
           console.log(res.affectedRows + " product inserted!\n");
+
+          inquirer
+            .prompt([
+              {
+                type: "confirm",
+                name: "addAnother",
+                message: "Would you like to update another Product?",
+                default: "true"
+              }
+            ])
+            .then(function(answer) {
+              if (answer.addAnother) {
+                addNewProduct();
+                return;
+              }
+              welcome();
+            });
         }
       );
 
@@ -188,8 +225,11 @@ function addNewProduct() {
 
 function start() {
   getConnected();
-  listProducts();
-  welcome();
+  setTimeout(() => {
+    listProducts();
+  }, 500);
+  setTimeout(() => {
+    welcome();
+  }, 1200);
 }
-
 start();

@@ -10,8 +10,8 @@ const connection = mysql.createConnection({
   database: "bamazonDB"
 });
 
-function getConnected() {
-  connection.connect(function(err) {
+async function getConnected() {
+  const connect = await connection.connect(function(err) {
     if (err) throw err;
     console.log("connected as id " + connection.threadId + "\n");
   });
@@ -19,7 +19,7 @@ function getConnected() {
 
 async function listProducts() {
   const result = await connection.query(
-    "SELECT * FROM products",
+    "SELECT item_id, product_name, price, stock_quantity FROM products",
     // "SELECT * FROM products WHERE ?",
     // {
     //   department_name: "Produce"
@@ -51,9 +51,7 @@ async function askBuy() {
     }
   ]);
 
-  // console.table(response);
   const result = await connection.query(
-    // "SELECT * FROM products",
     "SELECT * FROM products WHERE ?",
     {
       item_id: response.userItem
@@ -64,20 +62,35 @@ async function askBuy() {
       let availableStock = parseInt(res[0].stock_quantity);
       let itemPrice = res[0].price;
       let itemName = res[0].product_name;
+      let productSales = res[0].product_sales;
       let requestedStock = parseInt(response.userQty);
       //   console.log(response.userQty + " user quantity" + typeof response.userQty);
       //   console.log(res[0].stock_quantity + " stock quantity");
 
       if (requestedStock > availableStock) {
         // console.log(table);
-        console.log(`Not Enough Stock`);
+        console.log(
+          `\nApologies, we do not have enough stock for that large a purchase\n`
+        );
         listProducts();
-        askBuy();
+        setTimeout(() => {
+          askBuy();
+        }, 1250);
       } else {
-        // console.log(res[0].price);
-        let userCost = requestedStock * itemPrice;
+        let userCost = (requestedStock * itemPrice).toFixed(2);
+        let newTotalSales = (productSales + requestedStock * itemPrice).toFixed(
+          2
+        );
+        var profits = connection.query("UPDATE products SET ? WHERE ?", [
+          {
+            product_sales: newTotalSales
+          },
+          {
+            item_id: res[0].item_id
+          }
+        ]);
         let newStock = availableStock - requestedStock;
-        var query = connection.query(
+        connection.query(
           "UPDATE products SET ? WHERE ?",
           [
             {
@@ -102,7 +115,9 @@ async function askBuy() {
               ])
               .then(function(inquirerResponse) {
                 if (inquirerResponse.buyMore) {
-                  askBuy();
+                  setTimeout(() => {
+                    askBuy();
+                  }, 500);
                 } else {
                   console.log("\nThanks. Come again soon.\n");
                   connection.end();
@@ -111,23 +126,6 @@ async function askBuy() {
           }
         );
       }
-
-    }
-  );
-}
-
-function addProduct() {
-  connection.query(
-    "INSERT INTO products SET ?",
-    {
-      product_name: "Rocky Road",
-      department_name: "Grocery",
-      price: 5.99,
-      stock_quantity: 600
-    },
-    function(err, res) {
-      if (err) throw err;
-      console.log(res.affectedRows + " product inserted!\n");
     }
   );
 }
@@ -135,7 +133,10 @@ function addProduct() {
 function start() {
   getConnected();
   listProducts();
-  askBuy();
+  setTimeout(function() {
+    askBuy();
+  }, 2000);
+
   //   connection.end();
 }
 
