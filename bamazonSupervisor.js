@@ -10,27 +10,35 @@ const connection = mysql.createConnection({
   database: "bamazonDB"
 });
 
-async function getConnected() {
-  const result = await connection.connect(function(err) {
+function getConnected() {
+  connection.connect(function(err) {
     if (err) throw err;
     // console.log("connected as id " + connection.threadId + "\n");
   });
 }
 
 function listDepartmentSales() {
-  // const result = connection.query(
-  //   "SELECT * FROM departments",
-  //   function(err, res) {
-  //     if (err) throw err;
-  //     const table = cTable.getTable(res);
-  //     console.log(`\n${table}`);
-  //     return;
-  //   }
-  // );
+  //This freakin' query took a lot of research
   const result = connection.query(
-    "SELECT departments.department_id, departments.department_name, departments.over_head_costs FROM departments INNER JOIN products ON departments.department_name = products.department_name",
+    "SELECT departments.department_name,departments.over_head_costs,SUM(products.product_sales) FROM departments,products WHERE departments.department_name=products.department_name GROUP BY departments.department_name,departments.over_head_costs ORDER BY departments.department_name",
     function(err, res) {
       if (err) throw err;
+      // console.log(res);
+      res.forEach(element => {
+        let deptGain = element["SUM(products.product_sales)"];
+        if (deptGain === null) {
+          deptGainB = 0;
+          element.department_sales = deptGainB.toFixed(2);
+        } else {
+          element.department_sales = deptGain.toFixed(2);
+        }
+        let gain =
+          element["SUM(products.product_sales)"] - element.over_head_costs;
+        element.profits = gain.toFixed(2);
+        delete element["SUM(products.product_sales)"];
+        // console.log(element);
+      });
+
       const table = cTable.getTable(res);
       console.log(`\n${table}`);
       return;
@@ -38,10 +46,8 @@ function listDepartmentSales() {
   );
 }
 
-function welcome() {
-  // getConnected();
-  console.log(`\n`);
-  inquirer
+async function welcome() {
+  await inquirer
     .prompt([
       {
         name: "superChoice",
@@ -75,16 +81,12 @@ function welcome() {
           listDepartmentSales();
           setTimeout(() => {
             welcome();
-          }, 500);
+          }, 200);
       }
     });
-  //   connection.end();
 }
 
 function addNewDepartment() {
-  console.log(`
-  Add New Product chosen
-  `);
   inquirer
     .prompt([
       {
@@ -100,7 +102,6 @@ function addNewDepartment() {
       }
     ])
     .then(function(answer) {
-      console.log(`\n${answer}\n`);
       var query = connection.query(
         "INSERT INTO departments SET ?",
         {
@@ -129,20 +130,16 @@ function addNewDepartment() {
             });
         }
       );
-
-      // logs the actual query being run
-      // console.log(query.sql);
     });
-  // connection.end();
 }
 
 function start() {
   getConnected();
   setTimeout(() => {
     listDepartmentSales();
-  }, 200);
+  }, 100);
   setTimeout(() => {
     welcome();
-  }, 1200);
+  }, 500);
 }
 start();
