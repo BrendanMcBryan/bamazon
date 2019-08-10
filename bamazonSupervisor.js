@@ -58,7 +58,6 @@ async function welcome() {
     ])
     .then(function(answer) {
       var chosenItem = answer.superChoice;
-      console.log(chosenItem);
 
       switch (chosenItem) {
         case "Exit":
